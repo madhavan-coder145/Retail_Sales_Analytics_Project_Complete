@@ -1,0 +1,17 @@
+-- Create a Date table first
+DateTable =
+CALENDAR(MIN(RetailSales[Order_Date]), MAX(RetailSales[Order_Date]))
+
+Total Sales = SUM(RetailSales[Sales])
+Total Profit = SUM(RetailSales[Profit])
+Total Orders = DISTINCTCOUNT(RetailSales[Order_ID])
+Total Customers = DISTINCTCOUNT(RetailSales[Customer_ID])
+Units Sold = SUM(RetailSales[Quantity])
+Average Order Value = DIVIDE([Total Sales], [Total Orders])
+Profit Margin % = DIVIDE([Total Profit], [Total Sales])
+
+Previous Month Sales =
+CALCULATE([Total Sales], DATEADD(DateTable[Date], -1, MONTH))
+
+MoM Growth % =
+DIVIDE([Total Sales] - [Previous Month Sales], [Previous Month Sales])

@@ -1,0 +1,13 @@
+Interview explanation — 60–90 seconds
+
+“My project is Retail Sales and Customer Performance Analytics. The objective was to analyze 50,000 retail transactions and identify the main drivers of sales and profit.
+
+I started by checking the dataset for duplicates, missing values, inconsistent formats, and incorrect data types. I used Excel and Python with Pandas for cleaning and transformation.
+
+Then I used SQL to answer business questions such as total sales and profit, monthly growth, category and city performance, top products, customer value, and profit margins. I also used window functions for month-over-month analysis.
+
+For visualization, I built a Power BI dashboard with KPIs for sales, profit, orders, customers, average order value, and profit margin. I added slicers for date, city, category, and product so a business user can interact with the report.
+
+Finally, I converted the analysis into business recommendations, such as focusing on high-performing products and cities and reviewing low-margin categories.
+
+This project helped me practice the complete data analytics workflow from raw data to business decision-making.”

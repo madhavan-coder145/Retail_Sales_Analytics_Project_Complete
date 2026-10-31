@@ -1,0 +1,6 @@
+Retail Sales & Customer Performance Analytics | SQL, Excel, Python, Power BI
+- Analyzed 50,000+ retail transactions to identify sales, profitability, customer, product, and city-level trends.
+- Cleaned and transformed transaction data using Excel and Python (Pandas).
+- Developed SQL queries using joins/CTEs, aggregations, CASE logic, and window functions for business analysis.
+- Built an interactive Power BI dashboard with KPI cards, trend analysis, category/city performance, and dynamic filters.
+- Converted analytical findings into actionable business recommendations focused on revenue and profitability.
