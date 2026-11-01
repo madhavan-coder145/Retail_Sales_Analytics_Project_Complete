@@ -1,104 +1,165 @@
--- Retail Sales & Customer Performance Analytics
--- SQL dialect: PostgreSQL / standard SQL style
+-- RETAIL SALES & CUSTOMER PERFORMANCE ANALYTICS
+-- SQL DIALECT: MySQL 8.0+
 
--- 1. Total sales, profit and orders
+USE retail_analytics;
+
+-- 1. DATA OVERVIEW
+
 SELECT
+    COUNT(*) AS total_records,
     COUNT(DISTINCT Order_ID) AS total_orders,
-    SUM(Sales) AS total_sales,
-    SUM(Profit) AS total_profit,
-    ROUND(SUM(Profit) / NULLIF(SUM(Sales),0) * 100, 2) AS profit_margin_pct
+    COUNT(DISTINCT Customer_ID) AS unique_customers,
+    COUNT(DISTINCT Product) AS unique_products
 FROM retail_sales;
 
--- 2. Monthly sales trend
-SELECT
-    DATE_TRUNC('month', Order_Date) AS month,
-    SUM(Sales) AS sales,
-    SUM(Profit) AS profit
-FROM retail_sales
-GROUP BY 1
-ORDER BY 1;
 
--- 3. Category performance
+-- 2. DATA QUALITY CHECK
+
+SELECT
+    COUNT(*) AS total_records,
+    SUM(Order_ID IS NULL) AS missing_order_id,
+    SUM(Order_Date IS NULL) AS missing_order_date,
+    SUM(Customer_ID IS NULL) AS missing_customer_id,
+    SUM(Discount IS NULL) AS missing_discount,
+    SUM(Payment_Method IS NULL) AS missing_payment_method
+FROM retail_sales;
+
+
+-- 3. TOTAL SALES AND PROFIT
+
+SELECT
+    ROUND(SUM(Sales), 2) AS total_sales,
+    ROUND(SUM(Profit), 2) AS total_profit,
+    SUM(Quantity) AS total_quantity,
+    COUNT(DISTINCT Order_ID) AS total_orders,
+    ROUND(SUM(Sales) /
+    NULLIF(COUNT(DISTINCT Order_ID), 0), 2) AS average_order_value,
+    ROUND(SUM(Profit) /
+    NULLIF(SUM(Sales), 0) * 100, 2) AS profit_margin
+FROM retail_sales;
+
+
+-- 4. MONTHLY SALES TREND
+
+SELECT
+    DATE_FORMAT(Order_Date, '%Y-%m') AS sales_month,
+    ROUND(SUM(Sales), 2) AS monthly_sales,
+    ROUND(SUM(Profit), 2) AS monthly_profit
+FROM retail_sales
+GROUP BY DATE_FORMAT(Order_Date, '%Y-%m')
+ORDER BY sales_month;
+
+
+-- 5. CATEGORY PERFORMANCE
+
 SELECT
     Category,
-    SUM(Sales) AS sales,
-    SUM(Profit) AS profit,
-    SUM(Quantity) AS units_sold
+    SUM(Quantity) AS units_sold,
+    ROUND(SUM(Sales), 2) AS total_sales,
+    ROUND(SUM(Profit), 2) AS total_profit,
+    ROUND(SUM(Profit) /
+    NULLIF(SUM(Sales), 0) * 100, 2) AS profit_margin
 FROM retail_sales
 GROUP BY Category
-ORDER BY sales DESC;
+ORDER BY total_sales DESC;
 
--- 4. City performance
+
+-- 6. CITY-WISE PERFORMANCE
+
 SELECT
     City,
-    SUM(Sales) AS sales,
-    SUM(Profit) AS profit,
-    COUNT(DISTINCT Customer_ID) AS customers
+    COUNT(DISTINCT Order_ID) AS total_orders,
+    COUNT(DISTINCT Customer_ID) AS total_customers,
+    ROUND(SUM(Sales), 2) AS total_sales,
+    ROUND(SUM(Profit), 2) AS total_profit
 FROM retail_sales
 GROUP BY City
-ORDER BY sales DESC;
+ORDER BY total_sales DESC;
 
--- 5. Top 10 products by sales
+
+-- 7. TOP 10 PRODUCTS BY REVENUE
+
 SELECT
     Product,
     Category,
-    SUM(Sales) AS sales,
-    SUM(Profit) AS profit
+    SUM(Quantity) AS units_sold,
+    ROUND(SUM(Sales), 2) AS total_sales,
+    ROUND(SUM(Profit), 2) AS total_profit
 FROM retail_sales
 GROUP BY Product, Category
-ORDER BY sales DESC
+ORDER BY total_sales DESC
 LIMIT 10;
 
--- 6. Customer value
+
+-- 8. CUSTOMER PERFORMANCE
+
 SELECT
     Customer_ID,
-    COUNT(DISTINCT Order_ID) AS orders,
-    SUM(Sales) AS sales,
-    SUM(Profit) AS profit
+    COUNT(DISTINCT Order_ID) AS total_orders,
+    ROUND(SUM(Sales), 2) AS total_sales,
+    ROUND(SUM(Profit), 2) AS total_profit
 FROM retail_sales
 GROUP BY Customer_ID
-ORDER BY sales DESC
+ORDER BY total_sales DESC
 LIMIT 20;
 
--- 7. Payment method analysis
+
+-- 9. PAYMENT METHOD ANALYSIS
+
 SELECT
     Payment_Method,
-    COUNT(*) AS transactions,
-    SUM(Sales) AS sales
+    COUNT(*) AS total_transactions,
+    ROUND(SUM(Sales), 2) AS total_sales,
+    ROUND(SUM(Profit), 2) AS total_profit
 FROM retail_sales
 GROUP BY Payment_Method
-ORDER BY sales DESC;
+ORDER BY total_transactions DESC;
 
--- 8. Loss / low-margin products
+
+-- 10. PRODUCT PROFITABILITY ANALYSIS
+
 SELECT
     Product,
     Category,
-    SUM(Sales) AS sales,
-    SUM(Profit) AS profit,
-    ROUND(SUM(Profit)/NULLIF(SUM(Sales),0)*100,2) AS margin_pct
+    ROUND(SUM(Sales), 2) AS total_sales,
+    ROUND(SUM(Profit), 2) AS total_profit,
+    ROUND(SUM(Profit) /
+    NULLIF(SUM(Sales), 0) * 100, 2) AS profit_margin
 FROM retail_sales
 GROUP BY Product, Category
-HAVING SUM(Sales) > 0
-ORDER BY margin_pct ASC;
+ORDER BY profit_margin ASC;
 
--- 9. Month-over-month sales growth
-WITH monthly AS (
-    SELECT DATE_TRUNC('month', Order_Date) AS month, SUM(Sales) AS sales
+
+-- 11. MONTH-OVER-MONTH SALES GROWTH
+
+WITH monthly_sales AS (
+    SELECT
+        DATE_FORMAT(Order_Date, '%Y-%m') AS sales_month,
+        SUM(Sales) AS total_sales
     FROM retail_sales
-    GROUP BY 1
+    GROUP BY DATE_FORMAT(Order_Date, '%Y-%m')
+),
+sales_growth AS (
+    SELECT
+        sales_month,
+        total_sales,
+        LAG(total_sales) OVER (ORDER BY sales_month) AS previous_month_sales
+    FROM monthly_sales
 )
 SELECT
-    month,
-    sales,
-    LAG(sales) OVER (ORDER BY month) AS previous_month_sales,
+    sales_month,
+    ROUND(total_sales, 2) AS current_sales,
+    ROUND(previous_month_sales, 2) AS previous_sales,
     ROUND(
-        (sales - LAG(sales) OVER (ORDER BY month))
-        / NULLIF(LAG(sales) OVER (ORDER BY month),0) * 100, 2
-    ) AS mom_growth_pct
-FROM monthly
-ORDER BY month;
+        (total_sales - previous_month_sales) /
+        NULLIF(previous_month_sales, 0) * 100, 2
+    ) AS growth_percentage
+FROM sales_growth
+ORDER BY sales_month;
 
--- 10. Repeat customers
+
+-- 12. REPEAT CUSTOMER ANALYSIS
+
 SELECT
     COUNT(*) AS repeat_customers
 FROM (
@@ -106,4 +167,41 @@ FROM (
     FROM retail_sales
     GROUP BY Customer_ID
     HAVING COUNT(DISTINCT Order_ID) > 1
-) x;
+) AS customer_orders;
+
+
+-- 13. YEARLY SALES PERFORMANCE
+
+SELECT
+    YEAR(Order_Date) AS sales_year,
+    ROUND(SUM(Sales), 2) AS yearly_sales,
+    ROUND(SUM(Profit), 2) AS yearly_profit,
+    COUNT(DISTINCT Order_ID) AS total_orders
+FROM retail_sales
+GROUP BY YEAR(Order_Date)
+ORDER BY sales_year;
+
+
+-- 14. LOSS-MAKING PRODUCTS
+
+SELECT
+    Product,
+    Category,
+    ROUND(SUM(Sales), 2) AS total_sales,
+    ROUND(SUM(Profit), 2) AS total_profit
+FROM retail_sales
+GROUP BY Product, Category
+HAVING SUM(Profit) < 0
+ORDER BY total_profit ASC;
+
+
+-- 15. AVERAGE CATEGORY PERFORMANCE
+
+SELECT
+    Category,
+    ROUND(AVG(Sales), 2) AS average_sales,
+    ROUND(AVG(Profit), 2) AS average_profit,
+    ROUND(AVG(Discount), 2) AS average_discount
+FROM retail_sales
+GROUP BY Category
+ORDER BY average_sales DESC;
